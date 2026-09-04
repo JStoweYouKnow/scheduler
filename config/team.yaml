@@ -1,0 +1,19 @@
+studio: Matriarch
+phase: 3
+internalDomains:
+  - matriarch.studio
+  - matriarchstudios.com
+slackChannel: "#scheduling"
+sharedInbox:
+  memberSlug: vera
+  email: scheduling@matriarch.studio
+  label: scheduling
+members:
+  - slug: vera
+    name: Vera
+    email: vera@matriarch.studio
+    timezone: America/Los_Angeles
+  - slug: cofounder
+    name: Cofounder
+    email: cofounder@matriarch.studio
+    timezone: America/Los_Angeles

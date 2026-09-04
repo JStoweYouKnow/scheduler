@@ -1,0 +1,18 @@
+timezone: America/Los_Angeles
+priority: 2
+bufferMinutes: 15
+workingHours:
+  mon: { start: "09:00", end: "18:00" }
+  tue: { start: "09:00", end: "18:00" }
+  wed: { start: "09:00", end: "18:00" }
+  thu: { start: "09:00", end: "18:00" }
+  fri: { start: "09:00", end: "16:00" }
+protectedBlocks:
+  - days: [mon, tue, wed, thu, fri]
+    start: "12:00"
+    end: "13:00"
+    label: Lunch
+  - days: [fri]
+    start: "14:00"
+    end: "16:00"
+    label: Deep work
