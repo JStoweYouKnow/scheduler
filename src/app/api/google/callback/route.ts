@@ -12,6 +12,22 @@ export async function GET(request: NextRequest) {
     return Response.redirect(new URL("/?connected=1", request.url));
   } catch (error) {
     const message = error instanceof Error ? error.message : "OAuth failed";
-    return Response.json({ error: message }, { status: 500 });
+    console.error("Google OAuth callback failed", { slug, message });
+    return new Response(
+      `<!doctype html><html><body style="font-family:system-ui;padding:2rem;max-width:36rem">
+        <p>Google connect failed for <strong>${escapeHtml(slug)}</strong>.</p>
+        <p>${escapeHtml(message)}</p>
+        <p><a href="/">Back to Scheduler</a></p>
+      </body></html>`,
+      { status: 500, headers: { "Content-Type": "text/html; charset=utf-8" } },
+    );
   }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }

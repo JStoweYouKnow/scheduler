@@ -4,12 +4,12 @@ import { loadPersonRules, resetRulesCache } from "./load";
 import { fromZonedParts } from "../time";
 import type { BusyInterval, PersonRules } from "../types";
 
-function veraRules(): PersonRules {
-  return loadPersonRules("vera", process.cwd());
+function inboxRules(): PersonRules {
+  return loadPersonRules("v", process.cwd());
 }
 
 function cofounderRules(): PersonRules {
-  return loadPersonRules("cofounder", process.cwd());
+  return loadPersonRules("j", process.cwd());
 }
 
 function tuesdayMorning(): { start: Date; end: Date } {
@@ -27,7 +27,7 @@ describe("rules engine", () => {
   it("accepts a weekday slot inside working hours", () => {
     const slot = tuesdayMorning();
     const result = evaluateSlot(slot, [
-      { rules: veraRules(), calendarBusy: [] },
+      { rules: inboxRules(), calendarBusy: [] },
       { rules: cofounderRules(), calendarBusy: [] },
     ]);
     expect(result.ok).toBe(true);
@@ -38,19 +38,19 @@ describe("rules engine", () => {
       start: fromZonedParts(2026, 9, 8, 12, 0, "America/Los_Angeles"),
       end: fromZonedParts(2026, 9, 8, 12, 30, "America/Los_Angeles"),
     };
-    const result = evaluateSlot(slot, [{ rules: veraRules(), calendarBusy: [] }]);
+    const result = evaluateSlot(slot, [{ rules: inboxRules(), calendarBusy: [] }]);
     expect(result.ok).toBe(false);
     expect(result.conflicts.some((conflict) => conflict.source === "protected")).toBe(
       true,
     );
   });
 
-  it("rejects Friday deep-work for Vera", () => {
+  it("rejects Friday deep-work for V", () => {
     const slot = {
       start: fromZonedParts(2026, 9, 11, 14, 30, "America/Los_Angeles"),
       end: fromZonedParts(2026, 9, 11, 15, 0, "America/Los_Angeles"),
     };
-    const result = evaluateSlot(slot, [{ rules: veraRules(), calendarBusy: [] }]);
+    const result = evaluateSlot(slot, [{ rules: inboxRules(), calendarBusy: [] }]);
     expect(result.ok).toBe(false);
     expect(result.conflicts[0]?.label).toBe("Deep work");
   });
@@ -65,7 +65,7 @@ describe("rules engine", () => {
       },
     ];
     const slot = tuesdayMorning();
-    const result = evaluateSlot(slot, [{ rules: veraRules(), calendarBusy: busy }]);
+    const result = evaluateSlot(slot, [{ rules: inboxRules(), calendarBusy: busy }]);
     expect(result.ok).toBe(false);
     expect(result.conflicts.some((conflict) => conflict.source === "buffer")).toBe(true);
   });
@@ -75,7 +75,7 @@ describe("rules engine", () => {
       start: fromZonedParts(2026, 9, 12, 10, 0, "America/Los_Angeles"),
       end: fromZonedParts(2026, 9, 12, 10, 30, "America/Los_Angeles"),
     };
-    const result = evaluateSlot(slot, [{ rules: veraRules(), calendarBusy: [] }]);
+    const result = evaluateSlot(slot, [{ rules: inboxRules(), calendarBusy: [] }]);
     expect(result.ok).toBe(false);
     expect(result.conflicts[0]?.source).toBe("outside_hours");
   });
@@ -88,7 +88,7 @@ describe("rules engine", () => {
       windowEnd,
       durationMinutes: 30,
       people: [
-        { rules: veraRules(), calendarBusy: [] },
+        { rules: inboxRules(), calendarBusy: [] },
         { rules: cofounderRules(), calendarBusy: [] },
       ],
       limit: 3,
@@ -100,13 +100,13 @@ describe("rules engine", () => {
 
   it("memory calendar records created events as busy", async () => {
     const calendar = new MemoryCalendar();
-    await calendar.createEvent("vera@matriarch.studio", {
+    await calendar.createEvent("v@matriarch-studios.com", {
       title: "Hold",
       start: fromZonedParts(2026, 9, 8, 11, 0, "America/Los_Angeles"),
       end: fromZonedParts(2026, 9, 8, 11, 30, "America/Los_Angeles"),
-      attendeeEmails: ["cofounder@matriarch.studio"],
+      attendeeEmails: ["j@matriarch-studios.com"],
     });
-    const busy = await calendar.freeBusy("vera@matriarch.studio");
+    const busy = await calendar.freeBusy("v@matriarch-studios.com");
     expect(busy).toHaveLength(1);
   });
 });

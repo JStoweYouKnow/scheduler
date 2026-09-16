@@ -15,7 +15,7 @@ describe("approval execution", () => {
 
   it("sends a queued email only after approval", async () => {
     const gmail = new MemoryGmail();
-    const draft = await gmail.createDraft("vera@matriarch.studio", {
+    const draft = await gmail.createDraft("v@matriarch-studios.com", {
       to: "sarah@tubi.tv",
       subject: "Times",
       body: "Tuesday at 10?",
@@ -41,7 +41,7 @@ describe("approval execution", () => {
     const result = (await executeApprovedAction(
       "create_external_event",
       {
-        users: ["vera"],
+        users: ["v"],
         title: "Tubi intro",
         start: "2026-09-08T17:00:00.000Z",
         end: "2026-09-08T17:30:00.000Z",

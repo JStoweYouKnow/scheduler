@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { checkSlot, getAvailability } from "../calendar/availability";
-import { createGoogleCalendarPort } from "../calendar/google";
 import type { CalendarPort } from "../calendar/port";
 import { findMember, loadTeamConfig, requireMember } from "../config/team";
 import { approvalBlocks, postSlackMessage } from "../slack/client";
@@ -15,17 +14,13 @@ import {
   notesForRequest,
   updateRequestStatus,
 } from "../scheduling/repo";
-import {
-  createGoogleGmailPort,
-  draftEmail,
-  readThread,
-  sharedInboxEmail,
-} from "../email/gmail";
+import { draftEmail, readThread, sharedInboxEmail } from "../email/gmail";
 import type { GmailPort } from "../email/port";
-
-export function calendarPort(): CalendarPort {
-  return createGoogleCalendarPort();
-}
+import type { DrivePort } from "../drive/port";
+import { calendarPort, drivePort, gmailPort } from "../runtime";
+import { resolveMultiPartyConflict } from "../ai/conflicts";
+import { dumpMemoryMarkdown } from "../memory/dump";
+import { recallFacts, rememberFact } from "../memory/repo";
 
 const usersSchema = z.array(z.string()).min(1);
 
@@ -43,7 +38,8 @@ function isExternalCounterparty(
 
 export function buildToolHandlers(
   calendar: CalendarPort = calendarPort(),
-  gmail: GmailPort = createGoogleGmailPort(),
+  gmail: GmailPort = gmailPort(),
+  drive: DrivePort = drivePort(),
 ) {
   return {
     async get_availability(input: {
@@ -53,7 +49,7 @@ export function buildToolHandlers(
       durationMinutes: number;
     }) {
       const team = loadTeamConfig();
-      return getAvailability({
+      const result = await getAvailability({
         team,
         calendar,
         users: input.users,
@@ -61,6 +57,17 @@ export function buildToolHandlers(
         windowEnd: new Date(input.windowEnd),
         durationMinutes: input.durationMinutes,
       });
+      if (result.slots.length === 0 && input.users.length >= 2) {
+        const conflictResolution = await resolveMultiPartyConflict({
+          users: result.users,
+          windowStart: input.windowStart,
+          windowEnd: input.windowEnd,
+          durationMinutes: input.durationMinutes,
+          conflicts: result.conflicts,
+        });
+        return { ...result, conflictResolution };
+      }
+      return result;
     },
 
     async create_event(input: {
@@ -320,7 +327,12 @@ export function buildToolHandlers(
           summary: `To: ${input.to}\nSubject: ${input.subject}\n\n${input.body.slice(0, 500)}`,
         }),
       });
-      return { sent: false, pendingApproval: true, approvalId: approval.id };
+      return {
+        sent: false,
+        pendingApproval: true,
+        approvalId: approval.id,
+        nextStep: "Approve on the dashboard or CLI (--approve <id>).",
+      };
     },
 
     async read_thread(input: { threadId: string }) {
@@ -331,7 +343,27 @@ export function buildToolHandlers(
           message: "read_thread is phase 3 (shared inbox).",
         };
       }
-      return readThread(input.threadId);
+      return readThread(input.threadId, gmail);
+    },
+
+    async search_drive(input: { query: string; limit?: number }) {
+      return drive.search(input.query, input.limit ?? 5);
+    },
+
+    async remember(input: {
+      kind: string;
+      subject: string;
+      fact: string;
+    }) {
+      return rememberFact(input);
+    },
+
+    async recall(input: { query: string }) {
+      return recallFacts(input.query);
+    },
+
+    async dump_memory() {
+      return dumpMemoryMarkdown();
     },
 
     async create_scheduling_request(input: {
@@ -426,4 +458,17 @@ export const toolInputSchemas = {
     windowEnd: z.string().optional(),
     notes: z.string().optional(),
   }),
+  search_drive: z.object({
+    query: z.string(),
+    limit: z.number().int().positive().optional(),
+  }),
+  remember: z.object({
+    kind: z.string().describe("person | project | decision | commitment | preference"),
+    subject: z.string(),
+    fact: z.string(),
+  }),
+  recall: z.object({
+    query: z.string(),
+  }),
+  dump_memory: z.object({}),
 };

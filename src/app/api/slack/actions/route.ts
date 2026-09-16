@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { verifySlackSignature } from "@/lib/slack/verify";
-import { decideApproval, getApproval } from "@/lib/scheduling/repo";
-import { executeApprovedAction } from "@/lib/scheduling/execute-approval";
+import { getApproval } from "@/lib/scheduling/repo";
+import { resolveApproval } from "@/lib/scheduling/resolve-approval";
 import { postSlackMessage } from "@/lib/slack/client";
 
 export const runtime = "nodejs";
@@ -38,18 +38,11 @@ export async function POST(request: NextRequest) {
 
   const decision = action.action_id === "approve_send" ? "approved" : "rejected";
   const decidedBy = payload.user?.username ?? payload.user?.id ?? "unknown";
-  const approval = await decideApproval(action.value, decision, decidedBy);
-  if (!approval) {
-    return Response.json({ error: "Approval not found" }, { status: 404 });
-  }
-
   let result: unknown = null;
-  if (decision === "approved") {
-    result = await executeApprovedAction(
-      approval.kind,
-      approval.payload,
-      approval.schedulingRequestId,
-    );
+  try {
+    ({ result } = await resolveApproval(action.value, decision, decidedBy));
+  } catch {
+    return Response.json({ error: "Approval not found" }, { status: 404 });
   }
 
   const stored = await getApproval(action.value);

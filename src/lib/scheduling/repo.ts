@@ -1,11 +1,13 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "../db/client";
 import {
+  agentRuns,
   approvalRequests,
   inboundMessages,
   meetingNotes,
   schedulingRequests,
 } from "../db/schema";
+import { hasDatabase, isDemoMode } from "../env";
 import { assertTransition, isSchedulingStatus } from "./state-machine";
 import type {
   ProposedSlot,
@@ -13,6 +15,11 @@ import type {
   SchedulingConstraints,
   SchedulingStatus,
 } from "../types";
+import * as demoRepo from "./demo-repo";
+
+function demoing(): boolean {
+  return isDemoMode();
+}
 
 export interface CreateRequestInput {
   title: string;
@@ -31,6 +38,7 @@ export interface CreateRequestInput {
 }
 
 export async function createRequest(input: CreateRequestInput) {
+  if (demoing()) return demoRepo.createRequest(input);
   const db = getDb();
   const [row] = await db
     .insert(schedulingRequests)
@@ -56,6 +64,7 @@ export async function createRequest(input: CreateRequestInput) {
 }
 
 export async function getRequest(id: string) {
+  if (demoing()) return demoRepo.getRequest(id);
   const db = getDb();
   const [row] = await db
     .select()
@@ -65,6 +74,7 @@ export async function getRequest(id: string) {
 }
 
 export async function listOpenRequests() {
+  if (demoing()) return demoRepo.listOpenRequests();
   const db = getDb();
   return db
     .select()
@@ -80,6 +90,7 @@ export async function listOpenRequests() {
 }
 
 export async function listRecentRequests(limit = 20) {
+  if (demoing()) return demoRepo.listRecentRequests(limit);
   const db = getDb();
   return db
     .select()
@@ -101,6 +112,7 @@ export async function updateRequestStatus(
     slackThreadTs: string | null;
   }> = {},
 ) {
+  if (demoing()) return demoRepo.updateRequestStatus(id, to, patch);
   const existing = await getRequest(id);
   if (!existing) throw new Error(`Scheduling request ${id} not found`);
   if (!isSchedulingStatus(existing.status)) {
@@ -127,6 +139,7 @@ export async function createApproval(args: {
   slackChannel?: string;
   slackMessageTs?: string;
 }) {
+  if (demoing()) return demoRepo.createApproval(args);
   const db = getDb();
   const [row] = await db
     .insert(approvalRequests)
@@ -142,11 +155,23 @@ export async function createApproval(args: {
   return row;
 }
 
+export async function listPendingApprovals(limit = 50) {
+  if (demoing()) return demoRepo.listPendingApprovals(limit);
+  const db = getDb();
+  return db
+    .select()
+    .from(approvalRequests)
+    .where(eq(approvalRequests.status, "pending"))
+    .orderBy(desc(approvalRequests.createdAt))
+    .limit(limit);
+}
+
 export async function decideApproval(
   id: string,
   decision: "approved" | "rejected",
   decidedBy: string,
 ) {
+  if (demoing()) return demoRepo.decideApproval(id, decision, decidedBy);
   const db = getDb();
   const [row] = await db
     .update(approvalRequests)
@@ -155,12 +180,15 @@ export async function decideApproval(
       decidedBy,
       decidedAt: new Date(),
     })
-    .where(eq(approvalRequests.id, id))
+    .where(
+      and(eq(approvalRequests.id, id), eq(approvalRequests.status, "pending")),
+    )
     .returning();
   return row ?? null;
 }
 
 export async function getApproval(id: string) {
+  if (demoing()) return demoRepo.getApproval(id);
   const db = getDb();
   const [row] = await db
     .select()
@@ -176,12 +204,14 @@ export async function saveNotes(args: {
   agendaDraft?: string;
   followUpDraft?: string;
 }) {
+  if (demoing()) return demoRepo.saveNotes(args);
   const db = getDb();
   const [row] = await db.insert(meetingNotes).values(args).returning();
   return row;
 }
 
 export async function notesForEvent(calendarEventId: string) {
+  if (demoing()) return demoRepo.notesForEvent(calendarEventId);
   const db = getDb();
   return db
     .select()
@@ -191,6 +221,7 @@ export async function notesForEvent(calendarEventId: string) {
 }
 
 export async function notesForRequest(requestId: string) {
+  if (demoing()) return demoRepo.notesForRequest(requestId);
   const db = getDb();
   return db
     .select()
@@ -200,6 +231,7 @@ export async function notesForRequest(requestId: string) {
 }
 
 export async function findRequestByCalendarEvent(calendarEventId: string) {
+  if (demoing()) return demoRepo.findRequestByCalendarEvent(calendarEventId);
   const db = getDb();
   const [row] = await db
     .select()
@@ -209,6 +241,7 @@ export async function findRequestByCalendarEvent(calendarEventId: string) {
 }
 
 export async function findRequestsByCounterparty(email: string) {
+  if (demoing()) return demoRepo.findRequestsByCounterparty(email);
   const db = getDb();
   return db
     .select()
@@ -218,6 +251,7 @@ export async function findRequestsByCounterparty(email: string) {
 }
 
 export async function findInbound(provider: string, externalId: string) {
+  if (demoing()) return demoRepo.findInbound(provider, externalId);
   const db = getDb();
   const [row] = await db
     .select()
@@ -242,6 +276,7 @@ export async function recordInbound(args: {
   schedulingRequestId?: string;
   matched: boolean;
 }) {
+  if (demoing()) return demoRepo.recordInbound(args);
   const existing = await findInbound(args.provider, args.externalId);
   if (existing) return { row: existing, created: false };
   const db = getDb();
@@ -254,6 +289,7 @@ export async function patchInbound(
   id: string,
   patch: { schedulingRequestId?: string; matched?: boolean },
 ) {
+  if (demoing()) return demoRepo.patchInbound(id, patch);
   const db = getDb();
   const [row] = await db
     .update(inboundMessages)
@@ -264,6 +300,7 @@ export async function patchInbound(
 }
 
 export async function attachThread(requestId: string, threadId: string) {
+  if (demoing()) return demoRepo.attachThread(requestId, threadId);
   const existing = await getRequest(requestId);
   if (!existing) throw new Error(`Scheduling request ${requestId} not found`);
   const db = getDb();
@@ -273,4 +310,23 @@ export async function attachThread(requestId: string, threadId: string) {
     .where(eq(schedulingRequests.id, requestId))
     .returning();
   return row;
+}
+
+export async function recordAgentRun(input: {
+  source: string;
+  prompt: string;
+  resultText?: string;
+  schedulingRequestId?: string;
+}): Promise<void> {
+  if (demoing()) {
+    await demoRepo.recordAgentRun(input);
+    return;
+  }
+  if (!hasDatabase()) return;
+  await getDb().insert(agentRuns).values({
+    source: input.source,
+    prompt: input.prompt,
+    resultText: input.resultText,
+    schedulingRequestId: input.schedulingRequestId,
+  });
 }

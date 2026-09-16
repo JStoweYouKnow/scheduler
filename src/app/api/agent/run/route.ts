@@ -6,12 +6,13 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
-  if (!isAuthorized(request)) return unauthorized();
+  if (!(await isAuthorized(request))) return unauthorized();
   const body = (await request.json()) as {
     prompt?: string;
     source?: "cli" | "slack" | "email";
     slackChannel?: string;
     slackThreadTs?: string;
+    skill?: string;
   };
   if (!body.prompt?.trim()) {
     return Response.json({ error: "prompt is required" }, { status: 400 });
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
       source: body.source ?? "cli",
       slackChannel: body.slackChannel,
       slackThreadTs: body.slackThreadTs,
+      skill: body.skill,
     });
     return Response.json(result);
   } catch (error) {

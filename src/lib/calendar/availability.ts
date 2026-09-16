@@ -1,8 +1,8 @@
 import { evaluateSlot, findOpenSlots } from "../rules/engine";
 import { loadPersonRules } from "../rules/load";
 import { requireMember } from "../config/team";
-import type { TeamConfig } from "../types";
-import { iso } from "../time";
+import type { Conflict, TeamConfig } from "../types";
+import { addMinutes, iso } from "../time";
 import type { CalendarPort } from "./port";
 
 export async function getAvailability(args: {
@@ -27,16 +27,30 @@ export async function getAvailability(args: {
     }),
   );
 
+  const enginePeople = people.map((person) => ({
+    rules: person.rules,
+    calendarBusy: person.calendarBusy,
+  }));
   const slots = findOpenSlots({
     windowStart: args.windowStart,
     windowEnd: args.windowEnd,
     durationMinutes: args.durationMinutes,
-    people: people.map((person) => ({
-      rules: person.rules,
-      calendarBusy: person.calendarBusy,
-    })),
+    people: enginePeople,
     limit: args.limit,
   });
+
+  const conflicts: Conflict[] = [];
+  if (slots.length === 0) {
+    let cursor = args.windowStart;
+    for (let i = 0; i < 6 && addMinutes(cursor, args.durationMinutes) <= args.windowEnd; i += 1) {
+      const evaluation = evaluateSlot(
+        { start: cursor, end: addMinutes(cursor, args.durationMinutes) },
+        enginePeople,
+      );
+      conflicts.push(...evaluation.conflicts);
+      cursor = addMinutes(cursor, 60);
+    }
+  }
 
   return {
     users: people.map((person) => person.member.slug),
@@ -46,6 +60,7 @@ export async function getAvailability(args: {
       end: iso(slot.end),
       timezone: people[0]?.rules.timezone ?? "America/Los_Angeles",
     })),
+    conflicts,
   };
 }
 

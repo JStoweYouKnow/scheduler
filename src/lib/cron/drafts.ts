@@ -1,3 +1,6 @@
+import { generateText } from "ai";
+import { hasNebius, reasoningModel } from "../ai/models";
+
 export interface AgendaContext {
   title: string;
   when: string;
@@ -35,6 +38,36 @@ export function composeAgenda(context: AgendaContext): string {
   }
   lines.push("", "Follow-ups to cover", "- ");
   return lines.join("\n");
+}
+
+export async function composeAgendaDraft(context: AgendaContext): Promise<string> {
+  const fallback = composeAgenda(context);
+  if (!hasNebius()) return fallback;
+  const { text } = await generateText({
+    model: reasoningModel(),
+    temperature: 0.4,
+    prompt: [
+      "Write a T-1 meeting agenda. Be specific, short, and use the supplied context.",
+      "Include goals, leftover notes, thread context, and follow-ups.",
+      JSON.stringify(context),
+    ].join("\n"),
+  });
+  return text.trim() || fallback;
+}
+
+export async function composeFollowUpDraft(context: FollowUpContext): Promise<string> {
+  const fallback = composeFollowUp(context);
+  if (!hasNebius()) return fallback;
+  const { text } = await generateText({
+    model: reasoningModel(),
+    temperature: 0.4,
+    prompt: [
+      "Write a post-meeting follow-up email the owner can send after approval.",
+      "Plain text, greeting + thanks + notes + next steps + sign-off.",
+      JSON.stringify(context),
+    ].join("\n"),
+  });
+  return text.trim() || fallback;
 }
 
 export function composeFollowUp(context: FollowUpContext): string {

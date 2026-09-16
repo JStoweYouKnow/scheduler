@@ -5,11 +5,29 @@ import { getDb } from "../db/client";
 import { googleAccounts, teamMembers } from "../db/schema";
 
 export const GOOGLE_SCOPES = [
+  "openid",
+  "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.compose",
   "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/drive.readonly",
 ];
+
+/** Read email from a Google id_token payload without verifying the JWT. */
+export function emailFromIdToken(idToken: string | null | undefined): string | undefined {
+  if (!idToken) return undefined;
+  const payload = idToken.split(".")[1];
+  if (!payload) return undefined;
+  try {
+    const json = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      email?: unknown;
+    };
+    return typeof json.email === "string" ? json.email : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function oauthClient() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -38,9 +56,12 @@ export async function exchangeGoogleCode(code: string, slug: string): Promise<vo
     throw new Error("Google did not return a refresh token. Re-consent the account.");
   }
   client.setCredentials(tokens);
-  const oauth2 = google.oauth2({ version: "v2", auth: client });
-  const profile = await oauth2.userinfo.get();
-  const googleEmail = profile.data.email;
+  let googleEmail = emailFromIdToken(tokens.id_token);
+  if (!googleEmail) {
+    const oauth2 = google.oauth2({ version: "v2", auth: client });
+    const profile = await oauth2.userinfo.get();
+    googleEmail = profile.data.email ?? undefined;
+  }
   if (!googleEmail) {
     throw new Error("Google profile is missing an email");
   }

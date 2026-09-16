@@ -1,9 +1,9 @@
 import { checkSlot } from "../calendar/availability";
-import { createGoogleCalendarPort } from "../calendar/google";
 import type { CalendarPort } from "../calendar/port";
 import { loadTeamConfig, requireMember } from "../config/team";
-import { createGoogleGmailPort, sendEmail } from "../email/gmail";
+import { sendEmail } from "../email/gmail";
 import type { GmailPort } from "../email/port";
+import { calendarPort, gmailPort } from "../runtime";
 import { getRequest, updateRequestStatus } from "./repo";
 
 export async function executeApprovedAction(
@@ -20,7 +20,7 @@ export async function executeApprovedAction(
       draftId?: string;
       threadId?: string;
     };
-    return sendEmail(input, deps.gmail ?? createGoogleGmailPort());
+    return sendEmail(input, deps.gmail ?? gmailPort());
   }
 
   if (kind === "create_external_event") {
@@ -34,7 +34,7 @@ export async function executeApprovedAction(
       requestId?: string;
     };
     const team = loadTeamConfig();
-    const calendar = deps.calendar ?? createGoogleCalendarPort();
+    const calendar = deps.calendar ?? calendarPort();
     const start = new Date(input.start);
     const end = new Date(input.end);
     const evaluation = await checkSlot({
@@ -86,7 +86,7 @@ export async function executeApprovedAction(
     const organizerSlug = request.attendeeSlugs[0];
     if (!organizerSlug) throw new Error("Request has no attendees");
     const organizer = requireMember(team, organizerSlug);
-    const calendar = deps.calendar ?? createGoogleCalendarPort();
+    const calendar = deps.calendar ?? calendarPort();
     const event = await calendar.updateEvent(organizer.email, request.calendarEventId, {
       calendarId: request.calendarId ?? undefined,
       title: input.title,

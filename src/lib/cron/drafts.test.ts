@@ -5,7 +5,7 @@ describe("agenda and follow-up drafts", () => {
     const agenda = composeAgenda({
       title: "Tubi intro",
       when: "Tue 10:00–10:30 PT",
-      owner: "Vera",
+      owner: "V",
       counterparty: "Sarah Chen",
       organization: "Tubi",
       threadExcerpt: "Sarah: next week works if we can do 30 min.",
@@ -21,12 +21,12 @@ describe("agenda and follow-up drafts", () => {
     const followUp = composeFollowUp({
       title: "Tubi intro",
       when: "Tue 10:00",
-      owner: "Vera",
+      owner: "V",
       counterparty: "Sarah Chen",
       notes: "Walked the slate. They asked for a lookbook.",
     });
     expect(followUp.startsWith("Hi Sarah")).toBe(true);
     expect(followUp).toContain("lookbook");
-    expect(followUp).toContain("Vera");
+    expect(followUp).toContain("V");
   });
 });

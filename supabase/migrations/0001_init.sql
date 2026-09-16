@@ -118,8 +118,8 @@ alter table agent_runs enable row level security;
 
 insert into team_members (slug, display_name, email, timezone)
 values
-  ('vera', 'Vera', 'vera@matriarch.studio', 'America/Los_Angeles'),
-  ('cofounder', 'Cofounder', 'cofounder@matriarch.studio', 'America/Los_Angeles')
+  ('v', 'V', 'v@matriarch-studios.com', 'America/Los_Angeles'),
+  ('j', 'J', 'j@matriarch-studios.com', 'America/Los_Angeles')
 on conflict (slug) do update
 set display_name = excluded.display_name,
     email = excluded.email,

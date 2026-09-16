@@ -6,7 +6,7 @@ Scheduling agent (phase 3). Keep wrappers thin; put logic in `src/lib`.
 - Every user-facing ask should create or update a `scheduling_request`.
 - Inbound Gmail is matched before the agent runs (`src/lib/email/inbox.ts`).
 - `send_email` only creates an approval. Live send is `executeApprovedAction`.
-- Agent loop: `ToolLoopAgent` from `ai`, model `anthropic/claude-sonnet-5` via the AI Gateway.
+- Agent loop: `ToolLoopAgent` from `ai`, Nemotron Super via `@ai-sdk/openai-compatible` + `NEBIUS_API_KEY`. Nano classifies inbound mail. Ultra only for multi-party conflicts with no clean slot.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

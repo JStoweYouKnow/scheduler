@@ -1,11 +1,8 @@
 import type { CalendarEvent, CalendarPort } from "../calendar/port";
-import { createGoogleCalendarPort } from "../calendar/google";
 import { loadTeamConfig } from "../config/team";
-import {
-  createGoogleGmailPort,
-  sharedInboxEmail,
-} from "../email/gmail";
+import { sharedInboxEmail } from "../email/gmail";
 import type { GmailPort } from "../email/port";
+import { calendarPort, gmailPort } from "../runtime";
 import { phaseAllowsAgenda, phaseAllowsEmail } from "../scheduling/approval";
 import {
   findRequestByCalendarEvent,
@@ -17,7 +14,7 @@ import {
 import { approvalBlocks, postSlackMessage } from "../slack/client";
 import { createApproval } from "../scheduling/repo";
 import { localDayBounds } from "../time";
-import { composeAgenda, composeFollowUp } from "./drafts";
+import { composeAgendaDraft, composeFollowUpDraft } from "./drafts";
 
 export interface AgendaDeps {
   calendar?: CalendarPort;
@@ -70,8 +67,8 @@ export async function runAgendaCron(
   }
 
   const { start, end } = localDayBounds(now, teamTimezone(), 1);
-  const calendar = deps.calendar ?? createGoogleCalendarPort();
-  const gmail = deps.gmail ?? (phaseAllowsEmail(team.phase) ? createGoogleGmailPort() : undefined);
+  const calendar = deps.calendar ?? calendarPort();
+  const gmail = deps.gmail ?? (phaseAllowsEmail(team.phase) ? gmailPort() : undefined);
   let drafted = 0;
 
   for (const member of team.members) {
@@ -82,7 +79,7 @@ export async function runAgendaCron(
       const request = await findRequestByCalendarEvent(event.id);
       const excerpt = await threadExcerpt(gmail, request?.threadId ?? null);
       const lastNotes = await lastNotesForEvent(event);
-      const agenda = composeAgenda({
+      const agenda = await composeAgendaDraft({
         title: event.title,
         when: `${event.start} → ${event.end}`,
         owner: member.name,
@@ -117,8 +114,8 @@ export async function runFollowUpCron(
   }
 
   const { start } = localDayBounds(now, teamTimezone(), 0);
-  const calendar = deps.calendar ?? createGoogleCalendarPort();
-  const gmail = deps.gmail ?? (phaseAllowsEmail(team.phase) ? createGoogleGmailPort() : undefined);
+  const calendar = deps.calendar ?? calendarPort();
+  const gmail = deps.gmail ?? (phaseAllowsEmail(team.phase) ? gmailPort() : undefined);
   let drafted = 0;
 
   for (const member of team.members) {
@@ -130,7 +127,7 @@ export async function runFollowUpCron(
       const request = await findRequestByCalendarEvent(event.id);
       const excerpt = await threadExcerpt(gmail, request?.threadId ?? null);
       const notes = existing.find((note) => note.notes)?.notes ?? excerpt;
-      const followUp = composeFollowUp({
+      const followUp = await composeFollowUpDraft({
         title: event.title,
         when: `${event.start} → ${event.end}`,
         owner: member.name,

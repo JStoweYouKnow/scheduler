@@ -11,6 +11,7 @@ import {
 import { looksLikeScheduling } from "./parse";
 import type { GmailMessage, GmailPort } from "./port";
 import { sharedInboxEmail, sharedInboxLabel } from "./gmail";
+import { classifyInboxWithNano } from "./classify";
 
 export type InboxPlan =
   | { action: "ignore"; reason: string }
@@ -108,7 +109,8 @@ export async function processInbox(args: {
     });
     if (!recorded.created) continue;
 
-    const plan = planInboxAction(message, open);
+    const heuristic = planInboxAction(message, open);
+    const plan = await classifyInboxWithNano(message, open, heuristic);
     if (plan.action === "ignore") {
       ignored += 1;
       continue;

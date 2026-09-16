@@ -23,12 +23,9 @@ export function assertEmailAllowed(tool: string): void {
 
 export function sharedInboxEmail(): string {
   const team = loadTeamConfig();
+  if (team.sharedInbox?.email) return team.sharedInbox.email;
   const slug = team.sharedInbox?.memberSlug ?? team.members[0]?.slug;
-  const bySlug = team.members.find((item) => item.slug === slug);
-  const byInboxEmail = team.sharedInbox?.email
-    ? team.members.find((item) => item.email === team.sharedInbox?.email)
-    : undefined;
-  const member = byInboxEmail ?? bySlug ?? team.members[0];
+  const member = team.members.find((item) => item.slug === slug) ?? team.members[0];
   if (!member) throw new Error("No team members configured for the shared inbox");
   return member.email;
 }

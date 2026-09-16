@@ -1,3 +1,5 @@
+import { isDemoMode } from "./demo/mode";
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -17,8 +19,11 @@ export function getEnv() {
     appUrl: optional("APP_URL") ?? "http://localhost:3000",
     adminKey: optional("SCHEDULER_ADMIN_KEY"),
     tokenKey: optional("TOKEN_ENCRYPTION_KEY"),
-    anthropic: optional("ANTHROPIC_API_KEY"),
-    aiGateway: optional("AI_GATEWAY_API_KEY"),
+    nebius: optional("NEBIUS_API_KEY"),
+    modelReasoning: optional("MODEL_REASONING"),
+    modelFast: optional("MODEL_FAST"),
+    modelUltra: optional("MODEL_ULTRA"),
+    demoMode: isDemoMode(),
     googleClientId: optional("GOOGLE_CLIENT_ID"),
     googleClientSecret: optional("GOOGLE_CLIENT_SECRET"),
     googleRedirectUri: optional("GOOGLE_REDIRECT_URI"),
@@ -41,3 +46,9 @@ export function requireAdminKey(): string {
 export function hasDatabase(): boolean {
   return Boolean(process.env.DATABASE_URL);
 }
+
+export function hasPersistence(): boolean {
+  return hasDatabase() || isDemoMode();
+}
+
+export { isDemoMode };

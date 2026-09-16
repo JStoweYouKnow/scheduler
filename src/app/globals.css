@@ -1,19 +1,111 @@
 @import "tailwindcss";
 
+/*
+ * Palette shared with Dailie and Interface (sage on near-black / light paper).
+ * Theme toggles via .light-theme on <html>; localStorage key dailie-theme-v1
+ * is shared across the suite on thewizardofops.app.
+ */
 :root {
-  --background: #09090b;
-  --foreground: #f4f4f5;
+  --ink: #0a0d0b;
+  --panel: #141a17;
+  --panel-2: #1c2420;
+  --ghost: #26312b;
+  --bone: #f0f3ee;
+  --dim: #9aaba1;
+  --faint: #6e7f75;
+  --accent: #6f917d;
+  --danger: #c08d7a;
+  --warn: #b3a07f;
+  --line: rgba(240, 243, 238, 0.12);
+  --line-strong: rgba(240, 243, 238, 0.22);
+  --grain-opacity: 0.035;
+  --ease: cubic-bezier(0.22, 0.7, 0.2, 1);
+}
+
+.light-theme,
+:root.light-theme {
+  --ink: #f3f5f1;
+  --panel: #ffffff;
+  --panel-2: #eaeee8;
+  --ghost: #e0e5dd;
+  --bone: #222f27;
+  --dim: #5d6d63;
+  --faint: #84968c;
+  --accent: #4a6b57;
+  --danger: #a8664e;
+  --warn: #8a7444;
+  --line: rgba(34, 47, 39, 0.11);
+  --line-strong: rgba(34, 47, 39, 0.2);
+  --grain-opacity: 0.02;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-archivo);
+  --font-serif: var(--font-instrument);
+
+  --color-ink: var(--ink);
+  --color-bone: var(--bone);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
+  --color-ghost: var(--ghost);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  background-color: var(--color-ink);
+  color: var(--color-bone);
+  letter-spacing: 0.01em;
+  transition:
+    background-color 0.3s var(--ease),
+    color 0.3s var(--ease);
+}
+
+body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  color: var(--color-bone);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ghost);
+  border-radius: 0;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s var(--ease) both;
 }

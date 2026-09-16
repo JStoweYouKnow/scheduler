@@ -1,12 +1,15 @@
 import { ToolLoopAgent, isStepCount, tool } from "ai";
 import { loadTeamConfig } from "../config/team";
-import { getDb } from "../db/client";
-import { agentRuns } from "../db/schema";
-import { hasDatabase } from "../env";
+import { hasPersistence } from "../env";
+import { reasoningModel } from "../ai/models";
 import { systemPrompt } from "./prompt";
+import { selectSkill, skillPrompt } from "./skills";
 import { buildToolHandlers, toolInputSchemas } from "./tools";
+import { recordAgentRun } from "../scheduling/repo";
+import { calendarPort, drivePort, gmailPort } from "../runtime";
 import type { CalendarPort } from "../calendar/port";
 import type { GmailPort } from "../email/port";
+import type { DrivePort } from "../drive/port";
 import type { RequestSource } from "../types";
 
 export interface AgentRunInput {
@@ -16,20 +19,34 @@ export interface AgentRunInput {
   slackThreadTs?: string;
   calendar?: CalendarPort;
   gmail?: GmailPort;
+  drive?: DrivePort;
   schedulingRequestId?: string;
+  skill?: string;
 }
 
 export interface AgentRunResult {
   text: string;
   steps: number;
+  skill: string;
 }
 
-function createAgent(calendar?: CalendarPort, gmail?: GmailPort) {
+function createAgent(
+  calendar?: CalendarPort,
+  gmail?: GmailPort,
+  drive?: DrivePort,
+  skillInstructions?: string,
+) {
   const team = loadTeamConfig();
-  const handlers = buildToolHandlers(calendar, gmail);
+  const handlers = buildToolHandlers(
+    calendar ?? calendarPort(),
+    gmail ?? gmailPort(),
+    drive ?? drivePort(),
+  );
+  const base = systemPrompt(team);
   return new ToolLoopAgent({
-    model: "anthropic/claude-sonnet-5",
-    instructions: systemPrompt(team),
+    model: reasoningModel(),
+    temperature: 0.6,
+    instructions: skillInstructions ? `${base}\n\n${skillInstructions}` : base,
     stopWhen: isStepCount(12),
     tools: {
       get_availability: tool({
@@ -40,7 +57,7 @@ function createAgent(calendar?: CalendarPort, gmail?: GmailPort) {
       }),
       create_event: tool({
         description:
-          "Create a calendar event after the rules engine clears the slot. External counterparties go to Slack approval.",
+          "Create a calendar event after the rules engine clears the slot. External counterparties go to dashboard approval.",
         inputSchema: toolInputSchemas.create_event,
         execute: handlers.create_event,
       }),
@@ -59,6 +76,11 @@ function createAgent(calendar?: CalendarPort, gmail?: GmailPort) {
         inputSchema: toolInputSchemas.get_meeting_context,
         execute: handlers.get_meeting_context,
       }),
+      search_drive: tool({
+        description: "Search Drive for prep docs related to a meeting or project.",
+        inputSchema: toolInputSchemas.search_drive,
+        execute: handlers.search_drive,
+      }),
       create_scheduling_request: tool({
         description:
           "Open a scheduling_request so later inbound mail/Slack can attach to it.",
@@ -71,7 +93,7 @@ function createAgent(calendar?: CalendarPort, gmail?: GmailPort) {
         execute: handlers.draft_email,
       }),
       send_email: tool({
-        description: "Queue an outbound email for Slack approval. Gated until phase 3.",
+        description: "Queue an outbound email for dashboard approval. Gated until phase 3.",
         inputSchema: toolInputSchemas.send_email,
         execute: handlers.send_email,
       }),
@@ -80,6 +102,21 @@ function createAgent(calendar?: CalendarPort, gmail?: GmailPort) {
         inputSchema: toolInputSchemas.read_thread,
         execute: handlers.read_thread,
       }),
+      remember: tool({
+        description: "Persist a durable fact about a person, project, decision, or commitment.",
+        inputSchema: toolInputSchemas.remember,
+        execute: handlers.remember,
+      }),
+      recall: tool({
+        description: "Search durable memory facts.",
+        inputSchema: toolInputSchemas.recall,
+        execute: handlers.recall,
+      }),
+      dump_memory: tool({
+        description: "Write people, projects, and facts to Markdown files the studio owns.",
+        inputSchema: toolInputSchemas.dump_memory,
+        execute: handlers.dump_memory,
+      }),
     },
   });
 }
@@ -87,13 +124,20 @@ function createAgent(calendar?: CalendarPort, gmail?: GmailPort) {
 export async function runSchedulerAgent(
   input: AgentRunInput,
 ): Promise<AgentRunResult> {
-  const agent = createAgent(input.calendar, input.gmail);
+  const team = loadTeamConfig();
+  const skill = selectSkill(input.prompt, input.skill);
+  const agent = createAgent(
+    input.calendar,
+    input.gmail,
+    input.drive,
+    skillPrompt(team, skill),
+  );
   const result = await agent.generate({
     prompt: input.prompt,
   });
 
-  if (hasDatabase()) {
-    await getDb().insert(agentRuns).values({
+  if (hasPersistence()) {
+    await recordAgentRun({
       source: input.source,
       prompt: input.prompt,
       resultText: result.text,
@@ -104,5 +148,6 @@ export async function runSchedulerAgent(
   return {
     text: result.text,
     steps: result.steps.length,
+    skill: skill.name,
   };
 }

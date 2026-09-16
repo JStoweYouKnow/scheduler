@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { runSchedulerAgent } from "@/lib/agent/run";
 import { processInbox } from "@/lib/email/inbox";
-import { createGoogleGmailPort } from "@/lib/email/gmail";
+import { gmailPort } from "@/lib/runtime";
 import { postSlackMessage } from "@/lib/slack/client";
 import { loadTeamConfig } from "@/lib/config/team";
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   const team = loadTeamConfig();
   const stats = await processInbox({
-    gmail: createGoogleGmailPort(),
+    gmail: gmailPort(),
     onMatched: async (prompt, requestId) => {
       const result = await runSchedulerAgent({
         prompt,

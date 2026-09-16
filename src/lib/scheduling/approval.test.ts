@@ -4,14 +4,14 @@ import type { TeamConfig } from "../types";
 const team: TeamConfig = {
   studio: "Matriarch",
   phase: 1,
-  internalDomains: ["matriarch.studio"],
+  internalDomains: ["matriarch-studios.com"],
   slackChannel: "#scheduling",
   members: [],
 };
 
 describe("approval gates", () => {
   it("treats studio addresses as internal", () => {
-    expect(isExternalEmail("vera@matriarch.studio", team.internalDomains)).toBe(
+    expect(isExternalEmail("v@matriarch-studios.com", team.internalDomains)).toBe(
       false,
     );
   });
@@ -24,7 +24,7 @@ describe("approval gates", () => {
     expect(
       requiresApproval({
         isExternal: true,
-        counterpartyEmail: "vera@matriarch.studio",
+        counterpartyEmail: "v@matriarch-studios.com",
         team,
       }),
     ).toBe(true);
