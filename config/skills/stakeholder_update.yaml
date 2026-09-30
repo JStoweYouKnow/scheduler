@@ -1,0 +1,13 @@
+name: stakeholder_update
+title: Stakeholder update
+priority: 40
+when:
+  - stakeholder
+  - status update
+  - update for
+  - update to
+  - investor
+  - counterparty update
+instructions: |
+  Write a status note for an external party. recall project + people facts, then draft_email.
+  Keep it to: what shipped, what's blocked, the ask. Queue send_email for approval.

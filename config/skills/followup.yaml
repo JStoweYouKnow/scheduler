@@ -1,0 +1,16 @@
+name: followup
+title: Follow-up
+priority: 20
+when:
+  - follow-up
+  - follow up
+  - followup
+  - recap
+  - thanks for the time
+  - thanks for time
+  - thanks for the meeting
+  - thanks for meeting
+  - next steps
+instructions: |
+  After a meeting, turn notes into next steps. Call get_meeting_context, then draft_email.
+  send_email only queues approval. Prefer a short numbered list of commitments with owners.

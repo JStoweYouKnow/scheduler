@@ -1,78 +1,125 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { parse as parseYaml } from "yaml";
 import type { TeamConfig } from "../types";
 
-export type SkillName =
-  | "schedule"
-  | "prep"
-  | "followup"
-  | "track_project"
-  | "stakeholder_update";
-
 export interface Skill {
-  name: SkillName;
+  name: string;
   title: string;
   instructions: string;
+  when: string[];
+  default: boolean;
+  priority: number;
 }
 
-export const SKILLS: Record<SkillName, Skill> = {
-  schedule: {
-    name: "schedule",
-    title: "Schedule",
-    instructions: `Skill: schedule
-Find or hold time. Call lookup_contact, then get_availability, then create_scheduling_request / create_event.
-Never invent free slots. If get_availability returns conflictResolution, present those tradeoffs to the human — do not override protected time.`,
-  },
-  prep: {
-    name: "prep",
-    title: "Prep",
-    instructions: `Skill: prep
-Brief the owner before a meeting. Call get_meeting_context (request + notes + thread) then search_drive for related docs.
-Return: purpose, last decisions, open questions, and 3 agenda bullets. Cite Drive titles when you use them.`,
-  },
-  followup: {
-    name: "followup",
-    title: "Follow-up",
-    instructions: `Skill: followup
-After a meeting, turn notes into next steps. Call get_meeting_context, then draft_email.
-send_email only queues approval. Prefer a short numbered list of commitments with owners.`,
-  },
-  track_project: {
-    name: "track_project",
-    title: "Track project",
-    instructions: `Skill: track_project
-Keep projects, deliverables, and people notes durable. Use remember for facts (kind: project, person, decision, commitment, preference).
-Use recall before answering "where did we leave X". Do not invent status.`,
-  },
-  stakeholder_update: {
-    name: "stakeholder_update",
-    title: "Stakeholder update",
-    instructions: `Skill: stakeholder_update
-Write a status note for an external party. recall project + people facts, then draft_email.
-Keep it to: what shipped, what's blocked, the ask. Queue send_email for approval.`,
-  },
-};
-
-const HINTS: Array<{ skill: SkillName; pattern: RegExp }> = [
-  { skill: "prep", pattern: /\b(prep|brief|agenda|before the (call|meeting)|drive)\b/i },
-  { skill: "followup", pattern: /\b(follow[ -]?up|recap|thanks for (the )?(time|meeting)|next steps)\b/i },
-  { skill: "track_project", pattern: /\b(project|deliverable|milestone|remember|recall|status of)\b/i },
-  { skill: "stakeholder_update", pattern: /\b(stakeholder|status update|update (for|to) |investor|counterparty update)\b/i },
-  { skill: "schedule", pattern: /\b(schedul|hold|availability|meet|reschedul|calendar|time that works)\b/i },
-];
-
-export function selectSkill(prompt: string, explicit?: string | null): Skill {
-  if (explicit && explicit in SKILLS) {
-    return SKILLS[explicit as SkillName];
-  }
-  for (const hint of HINTS) {
-    if (hint.pattern.test(prompt)) return SKILLS[hint.skill];
-  }
-  return SKILLS.schedule;
+interface RawSkill {
+  name?: string;
+  title?: string;
+  instructions?: string;
+  when?: unknown;
+  default?: boolean;
+  priority?: number;
 }
 
-export function skillPrompt(team: TeamConfig, skill: Skill): string {
-  return `${skill.instructions}
+const caches = new Map<string, Skill[]>();
 
-Studio: ${team.studio}. Skills on this agent: ${Object.values(SKILLS)
+function skillsDir(root: string): string {
+  return join(root, "config", "skills");
+}
+
+function phrasePattern(phrase: string): RegExp {
+  const escaped = phrase.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|\\W)${escaped}(?:\\W|$)`, "i");
+}
+
+function parseSkillFile(path: string, fallbackName: string): Skill {
+  const raw = parseYaml(readFileSync(path, "utf8")) as RawSkill | null;
+  if (!raw || typeof raw !== "object") {
+    throw new Error(`Invalid skill YAML: ${path}`);
+  }
+  const name = (raw.name?.trim() || fallbackName).toLowerCase();
+  const instructions = raw.instructions?.trim();
+  if (!instructions) {
+    throw new Error(`Skill ${name} is missing instructions`);
+  }
+  const when = Array.isArray(raw.when)
+    ? raw.when.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+  return {
+    name,
+    title: raw.title?.trim() || name,
+    instructions,
+    when,
+    default: Boolean(raw.default),
+    priority: typeof raw.priority === "number" ? raw.priority : 100,
+  };
+}
+
+export function loadSkills(root = process.cwd()): Skill[] {
+  const hit = caches.get(root);
+  if (hit) return hit;
+  const dir = skillsDir(root);
+  if (!existsSync(dir)) {
+    throw new Error(`Missing skills directory: ${dir}`);
+  }
+  const files = readdirSync(dir)
+    .filter((file) => file.endsWith(".yaml") || file.endsWith(".yml"))
+    .sort();
+  if (files.length === 0) {
+    throw new Error(`No skill YAML files in ${dir}`);
+  }
+  const loaded = files.map((file) =>
+    parseSkillFile(join(dir, file), file.replace(/\.ya?ml$/i, "")),
+  );
+  const names = new Set<string>();
+  for (const skill of loaded) {
+    if (names.has(skill.name)) {
+      throw new Error(`Duplicate skill name: ${skill.name}`);
+    }
+    names.add(skill.name);
+  }
+  loaded.sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
+  caches.set(root, loaded);
+  return loaded;
+}
+
+export function resetSkillsCache(): void {
+  caches.clear();
+}
+
+export function getSkills(root = process.cwd()): Record<string, Skill> {
+  return Object.fromEntries(loadSkills(root).map((skill) => [skill.name, skill]));
+}
+
+function defaultSkill(skills: Skill[]): Skill {
+  return skills.find((skill) => skill.default) ?? skills[0]!;
+}
+
+export function selectSkill(
+  prompt: string,
+  explicit?: string | null,
+  root = process.cwd(),
+): Skill {
+  const skills = loadSkills(root);
+  const byName = getSkills(root);
+  if (explicit) {
+    const named = byName[explicit.trim().toLowerCase()];
+    if (named) return named;
+  }
+  for (const skill of skills) {
+    if (skill.when.some((phrase) => phrasePattern(phrase).test(prompt))) {
+      return skill;
+    }
+  }
+  return defaultSkill(skills);
+}
+
+export function skillPrompt(team: TeamConfig, skill: Skill, root = process.cwd()): string {
+  const names = loadSkills(root)
     .map((item) => item.name)
-    .join(", ")}.`;
+    .join(", ");
+  return `Skill: ${skill.name}
+${skill.instructions}
+
+Studio: ${team.studio}. Skills on this agent: ${names}.`;
 }

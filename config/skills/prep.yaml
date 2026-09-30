@@ -1,0 +1,13 @@
+name: prep
+title: Prep
+priority: 10
+when:
+  - prep
+  - brief
+  - agenda
+  - before the call
+  - before the meeting
+  - drive
+instructions: |
+  Brief the owner before a meeting. Call get_meeting_context (request + notes + thread) then search_drive for related docs.
+  Return: purpose, last decisions, open questions, and 3 agenda bullets. Cite Drive titles when you use them.

@@ -1,0 +1,13 @@
+name: track_project
+title: Track project
+priority: 30
+when:
+  - project
+  - deliverable
+  - milestone
+  - remember
+  - recall
+  - status of
+instructions: |
+  Keep projects, deliverables, and people notes durable. Use remember for facts (kind: project, person, decision, commitment, preference).
+  Use recall before answering "where did we leave X". Do not invent status.

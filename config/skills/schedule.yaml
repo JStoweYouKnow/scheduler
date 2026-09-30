@@ -1,0 +1,26 @@
+# Drop a new file here to add a skill. No TypeScript required.
+# name: slug (defaults to the filename)
+# title: short label
+# default: true  — used when no `when` phrase matches (only one)
+# priority: lower runs first (default 100)
+# when: phrases matched as whole words (case-insensitive)
+# instructions: prompt appended to the Super tool loop
+
+name: schedule
+title: Schedule
+default: true
+priority: 50
+when:
+  - schedule
+  - scheduling
+  - hold
+  - availability
+  - meet
+  - meeting
+  - reschedule
+  - rescheduling
+  - calendar
+  - time that works
+instructions: |
+  Find or hold time. Call lookup_contact, then get_availability, then create_scheduling_request / create_event.
+  Never invent free slots. If get_availability returns conflictResolution, present those tradeoffs to the human — do not override protected time.

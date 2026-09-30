@@ -14,6 +14,7 @@
     "schedule": "tsx cli/schedule.ts",
     "inbox": "tsx cli/schedule.ts --inbox",
     "spike": "tsx scripts/spike-tools.ts",
+    "eval:inbox": "tsx scripts/eval-inbox.ts",
     "job:inbox": "tsx jobs/inbox.ts",
     "job:consolidate": "tsx jobs/consolidate.ts",
     "memory:dump": "tsx cli/schedule.ts --dump-memory",

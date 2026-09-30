@@ -7,6 +7,7 @@ Scheduling agent (phase 3). Keep wrappers thin; put logic in `src/lib`.
 - Inbound Gmail is matched before the agent runs (`src/lib/email/inbox.ts`).
 - `send_email` only creates an approval. Live send is `executeApprovedAction`.
 - Agent loop: `ToolLoopAgent` from `ai`, Nemotron Super via `@ai-sdk/openai-compatible` + `NEBIUS_API_KEY`. Nano classifies inbound mail. Ultra only for multi-party conflicts with no clean slot.
+- Super skills are YAML in `config/skills/` (same idea as `config/rules/`). Do not hardcode skill prompts in TypeScript.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
