@@ -45,3 +45,9 @@ next-env.d.ts
 # dumped memory (your data, in files you own)
 /memory/*.md
 !/memory/.gitkeep
+
+# local scratch — drafts and exports, not part of the submission
+/files.zip
+/files/
+/README Claude.md
+/supabase/.temp/

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { SetupCheck } from "@/lib/setup";
 import type { TeamConfig } from "@/lib/types";
 import { Card, PageHeader, RequestStatusBadge, StatCard, StatusBadge, Td, Th } from "./ui";
@@ -108,9 +108,11 @@ function DashboardInner({
   const [approvalBusy, setApprovalBusy] = useState<string | null>(null);
   const [dumpPath, setDumpPath] = useState<string | null>(null);
 
-  const authHeaders: HeadersInit = adminKey
-    ? { Authorization: `Bearer ${adminKey}` }
-    : {};
+  const authHeaders = useMemo<Record<string, string>>(() => {
+    const headers: Record<string, string> = {};
+    if (adminKey) headers.Authorization = `Bearer ${adminKey}`;
+    return headers;
+  }, [adminKey]);
 
   useEffect(() => {
     if (!authed) return;
@@ -120,7 +122,7 @@ function DashboardInner({
     void fetch("/api/approvals", { headers: authHeaders })
       .then((res) => (res.ok ? res.json() : { approvals: [] }))
       .then((data: { approvals?: ApprovalRow[] }) => setApprovals(data.approvals ?? []));
-  }, [authed, adminKey, reply, approvalBusy]);
+  }, [authed, authHeaders, reply, approvalBusy]);
 
   async function runPrompt(event: React.FormEvent) {
     event.preventDefault();

@@ -6,7 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
@@ -23,13 +23,37 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function readStoredTheme(): Theme {
+const listeners = new Set<() => void>();
+
+/**
+ * localStorage is the store; React subscribes to it. Reading through
+ * useSyncExternalStore (rather than seeding state from an effect) keeps the
+ * server render and the first client render consistent without a setState
+ * cascade on mount.
+ */
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function emit() {
+  for (const listener of listeners) listener();
+}
+
+function readTheme(): Theme {
   try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    return stored === "light" ? "light" : "dark";
+    return localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
   } catch {
     return "dark";
   }
+}
+
+function serverTheme(): Theme {
+  return "dark";
 }
 
 function applyThemeClass(theme: Theme) {
@@ -37,27 +61,26 @@ function applyThemeClass(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const theme = useSyncExternalStore(subscribe, readTheme, serverTheme);
 
+  // Pushing the current theme onto <html> is the one thing that genuinely
+  // belongs in an effect: syncing React state to an external system.
   useEffect(() => {
-    const initial = readStoredTheme();
-    setThemeState(initial);
-    applyThemeClass(initial);
-  }, []);
+    applyThemeClass(theme);
+  }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    applyThemeClass(next);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
       /* private mode */
     }
+    emit();
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  }, [setTheme, theme]);
+    setTheme(readTheme() === "dark" ? "light" : "dark");
+  }, [setTheme]);
 
   const value = useMemo(
     () => ({ theme, setTheme, toggleTheme }),
