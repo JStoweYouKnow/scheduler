@@ -18,6 +18,8 @@ import { draftEmail, readThread, sharedInboxEmail } from "../email/gmail";
 import type { GmailPort } from "../email/port";
 import type { DrivePort } from "../drive/port";
 import { calendarPort, drivePort, gmailPort } from "../runtime";
+import { iso } from "../time";
+import { guardEvent, guardFutureInstant, guardWindow } from "./when";
 import { resolveMultiPartyConflict } from "../ai/conflicts";
 import { dumpMemoryMarkdown } from "../memory/dump";
 import { recallFacts, rememberFact } from "../memory/repo";
@@ -49,25 +51,32 @@ export function buildToolHandlers(
       durationMinutes: number;
     }) {
       const team = loadTeamConfig();
+      const window = guardWindow(input.windowStart, input.windowEnd);
+      if (!window.ok) return window;
       const result = await getAvailability({
         team,
         calendar,
         users: input.users,
-        windowStart: new Date(input.windowStart),
-        windowEnd: new Date(input.windowEnd),
+        windowStart: window.windowStart,
+        windowEnd: window.windowEnd,
         durationMinutes: input.durationMinutes,
       });
+      const searched = {
+        windowStart: iso(window.windowStart),
+        windowEnd: iso(window.windowEnd),
+        clampedToNow: window.clampedToNow,
+      };
       if (result.slots.length === 0 && input.users.length >= 2) {
         const conflictResolution = await resolveMultiPartyConflict({
           users: result.users,
-          windowStart: input.windowStart,
-          windowEnd: input.windowEnd,
+          windowStart: searched.windowStart,
+          windowEnd: searched.windowEnd,
           durationMinutes: input.durationMinutes,
           conflicts: result.conflicts,
         });
-        return { ...result, conflictResolution };
+        return { ...result, searched, conflictResolution };
       }
-      return result;
+      return { ...result, searched };
     },
 
     async create_event(input: {
@@ -83,8 +92,16 @@ export function buildToolHandlers(
     }) {
       const team = loadTeamConfig();
       const users = usersSchema.parse(input.users);
-      const start = new Date(input.start);
-      const end = new Date(input.end);
+      const when = guardEvent(input.start, input.end);
+      if (!when.ok) {
+        return {
+          created: false,
+          reason: when.reason,
+          message: when.message,
+          now: when.now,
+        };
+      }
+      const { start, end } = when;
       const evaluation = await checkSlot({
         team,
         calendar,
@@ -194,6 +211,18 @@ export function buildToolHandlers(
       const organizerSlug = request.attendeeSlugs[0];
       if (!organizerSlug) throw new Error("Request has no attendees");
       const organizer = requireMember(team, organizerSlug);
+
+      if (input.start) {
+        const when = guardFutureInstant(input.start);
+        if (!when.ok) {
+          return {
+            updated: false,
+            reason: when.reason,
+            message: when.message,
+            now: when.now,
+          };
+        }
+      }
 
       if (input.start && input.end) {
         const evaluation = await checkSlot({
