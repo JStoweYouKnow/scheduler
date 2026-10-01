@@ -11,7 +11,7 @@ A scheduling agent for Matriarch. It finds open time, holds it, matches inbound 
 - Ultra writes multi-party conflict tradeoffs only when `get_availability` returns no clean slot
 - Persistent memory (`projects`, `deliverables`, `people`, `memory_facts`) with remember / recall / Markdown dump
 - Counterparty research via Tavily in the `prep` skill — web text is sanitized and labelled untrusted before it reaches the loop
-- `DEMO_MODE=1` seeds fictional calendar + Gmail + research so judges only need a Nebius key
+- `DEMO_MODE=1` seeds fictional calendar + Gmail + research so judges only need a Nebius key — add `TAVILY_API_KEY` and demo research goes live
 
 ## Tech stack
 
@@ -176,7 +176,7 @@ Copy `.env.example`. Required for live: `NEBIUS_API_KEY`. Required unless `DEMO_
 | `TOKEN_ENCRYPTION_KEY` | unless demo | `openssl rand -base64 32` |
 | `GOOGLE_CLIENT_ID` / `SECRET` / `REDIRECT_URI` | unless demo | Calendar + Gmail + Drive |
 | `GMAIL_LABEL` | no | Overrides `sharedInbox.label` |
-| `TAVILY_API_KEY` | no | Counterparty research in `prep`. Seeded in demo; without it `prep` uses Drive + thread only |
+| `TAVILY_API_KEY` | no | Counterparty research in `prep`. Used even in `DEMO_MODE` when set; without it demo falls back to seeded research and live mode uses Drive + thread only |
 | `SLACK_BOT_TOKEN` / `SIGNING_SECRET` / `CHANNEL` | no | Approvals also live on the dashboard |
 | `NEXT_PUBLIC_CLERK_*` / `CLERK_SECRET_KEY` | no | Skipped in demo |
 | `CRON_SECRET` | no | Vercel cron auth |

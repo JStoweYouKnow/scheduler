@@ -101,7 +101,7 @@ described.
 | --- | --- |
 | `src/lib/research/port.ts` | Types, the untrusted-text note, snippet sanitizer, result cap. |
 | `src/lib/research/tavily.ts` | Tavily `/search` wrapper. Bearer auth, 15s timeout, never requests `include_raw_content`. Returns `available:false` instead of throwing, so a failed lookup degrades the brief rather than failing the loop. |
-| `src/lib/research/memory.ts` | In-memory double; seeded in `DEMO_MODE` so judges see research without a Tavily key. |
+| `src/lib/research/memory.ts` | In-memory double; seeded fallback so judges see research without a Tavily key. Demo mode fakes what needs OAuth or infra — Tavily needs only a key, so when one is set the real path runs even in `DEMO_MODE`. |
 | `src/lib/research/research.test.ts` | 13 tests: request shaping, response normalising, graceful degradation, and a tool-boundary test asserting hostile web text is defanged. |
 | `src/lib/agent/tools.ts`, `run.ts` (changed) | New `research` tool, threaded through `buildToolHandlers`. |
 | `config/skills/prep.yaml` (changed) | `prep` now runs context → Drive → research, and carries the untrusted-text rule. |

@@ -77,9 +77,11 @@ export function setupChecks(): SetupCheck[] {
     {
       name: "TAVILY_API_KEY",
       ok: hasTavily() || isDemoMode(),
-      hint: isDemoMode()
-        ? "Bypassed — seeded research results in judge mode."
-        : "Optional. Enables counterparty research in the prep skill; without it prep briefs from Drive and thread context only.",
+      hint: hasTavily()
+        ? "Live counterparty research in the prep skill — used even in DEMO_MODE."
+        : isDemoMode()
+          ? "Not set — prep falls back to seeded demo research."
+          : "Optional. Without it, prep briefs from Drive and thread context only.",
     },
   ];
 }

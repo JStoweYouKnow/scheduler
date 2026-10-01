@@ -8,7 +8,7 @@ import { MemoryDrive } from "./drive/memory";
 import { createGoogleDrivePort } from "./drive/google";
 import type { DrivePort } from "./drive/port";
 import { MemoryResearch } from "./research/memory";
-import { createTavilyResearchPort } from "./research/tavily";
+import { createTavilyResearchPort, hasTavily } from "./research/tavily";
 import type { ResearchPort } from "./research/port";
 import { isDemoMode } from "./env";
 import { seedDemoPorts } from "./demo/seed";
@@ -66,5 +66,11 @@ export function drivePort(): DrivePort {
 }
 
 export function researchPort(): ResearchPort {
-  return isDemoMode() ? demoResearchPort() : createTavilyResearchPort();
+  // Demo mode exists to skip the integrations that need OAuth or infrastructure
+  // — Google, Postgres, Slack, Clerk. Tavily needs only a key, so when one is
+  // present we use the real thing even in demo: otherwise the hosted demo (which
+  // must run DEMO_MODE=1) could never exercise real research. Without a key we
+  // fall back to seeded results, so judges still see the prep skill work.
+  if (isDemoMode() && !hasTavily()) return demoResearchPort();
+  return createTavilyResearchPort();
 }
