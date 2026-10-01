@@ -1,5 +1,6 @@
 import { hasDatabase, hasPersistence, isDemoMode } from "./env";
 import { hasNebius } from "./ai/models";
+import { hasTavily } from "./research/tavily";
 
 export interface SetupCheck {
   name: string;
@@ -72,6 +73,13 @@ export function setupChecks(): SetupCheck[] {
       name: "Slack",
       ok: Boolean(process.env.SLACK_BOT_TOKEN && process.env.SLACK_SIGNING_SECRET),
       hint: "Optional. Approvals also live on this dashboard without Slack.",
+    },
+    {
+      name: "TAVILY_API_KEY",
+      ok: hasTavily() || isDemoMode(),
+      hint: isDemoMode()
+        ? "Bypassed — seeded research results in judge mode."
+        : "Optional. Enables counterparty research in the prep skill; without it prep briefs from Drive and thread context only.",
     },
   ];
 }

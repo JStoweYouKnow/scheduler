@@ -7,6 +7,9 @@ import type { GmailPort } from "./email/port";
 import { MemoryDrive } from "./drive/memory";
 import { createGoogleDrivePort } from "./drive/google";
 import type { DrivePort } from "./drive/port";
+import { MemoryResearch } from "./research/memory";
+import { createTavilyResearchPort } from "./research/tavily";
+import type { ResearchPort } from "./research/port";
 import { isDemoMode } from "./env";
 import { seedDemoPorts } from "./demo/seed";
 import { seedDemoMemory } from "./demo/store";
@@ -14,6 +17,7 @@ import { seedDemoMemory } from "./demo/store";
 let demoCalendar: MemoryCalendar | undefined;
 let demoGmail: MemoryGmail | undefined;
 let demoDrive: MemoryDrive | undefined;
+let demoResearch: MemoryResearch | undefined;
 
 export function demoCalendarPort(): MemoryCalendar {
   if (!demoCalendar) {
@@ -22,6 +26,7 @@ export function demoCalendarPort(): MemoryCalendar {
     demoCalendar = seeded.calendar;
     demoGmail = seeded.gmail;
     demoDrive = seeded.drive;
+    demoResearch = seeded.research;
   }
   return demoCalendar;
 }
@@ -36,10 +41,16 @@ export function demoDrivePort(): MemoryDrive {
   return demoDrive!;
 }
 
+export function demoResearchPort(): MemoryResearch {
+  demoCalendarPort();
+  return demoResearch!;
+}
+
 export function resetDemoPorts(): void {
   demoCalendar = undefined;
   demoGmail = undefined;
   demoDrive = undefined;
+  demoResearch = undefined;
 }
 
 export function calendarPort(): CalendarPort {
@@ -52,4 +63,8 @@ export function gmailPort(): GmailPort {
 
 export function drivePort(): DrivePort {
   return isDemoMode() ? demoDrivePort() : createGoogleDrivePort();
+}
+
+export function researchPort(): ResearchPort {
+  return isDemoMode() ? demoResearchPort() : createTavilyResearchPort();
 }

@@ -1,12 +1,14 @@
 import { MemoryCalendar } from "../calendar/memory";
 import { MemoryGmail } from "../email/memory";
 import { MemoryDrive } from "../drive/memory";
+import { MemoryResearch } from "../research/memory";
 import { addMinutes } from "../time";
 
 export function seedDemoPorts() {
   const calendar = new MemoryCalendar();
   const gmail = new MemoryGmail();
   const drive = new MemoryDrive();
+  const research = new MemoryResearch();
 
   const tuesdayTen = new Date("2026-09-22T17:00:00.000Z");
   calendar.setBusy("v@matriarch-studios.com", [
@@ -59,5 +61,27 @@ export function seedDemoPorts() {
     },
   ]);
 
-  return { calendar, gmail, drive };
+  // Seeded so the prep skill's web research works in judge mode without a
+  // Tavily key. Fictional, like the rest of the demo production.
+  research.seed(
+    [
+      {
+        title: "Tubi orders four unscripted originals for 2027 slate",
+        url: "https://example.com/tubi-unscripted-slate",
+        snippet:
+          "The free streamer is leaning into low-cost unscripted, with a stated preference for packages that arrive with a lookbook and a named showrunner.",
+        publishedDate: "2026-09-12",
+      },
+      {
+        title: "Sarah Chen promoted to VP, Unscripted Originals at Tubi",
+        url: "https://example.com/sarah-chen-vp",
+        snippet:
+          "Chen moves up from Director, and now controls greenlights under $2M. She has said publicly that she passes on anything without a one-sheet.",
+        publishedDate: "2026-08-28",
+      },
+    ],
+    "Tubi is buying unscripted for its 2027 slate; Sarah Chen is the decision-maker under $2M and expects a one-sheet up front.",
+  );
+
+  return { calendar, gmail, drive, research };
 }

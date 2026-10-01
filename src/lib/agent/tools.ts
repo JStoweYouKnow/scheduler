@@ -17,7 +17,8 @@ import {
 import { draftEmail, readThread, sharedInboxEmail } from "../email/gmail";
 import type { GmailPort } from "../email/port";
 import type { DrivePort } from "../drive/port";
-import { calendarPort, drivePort, gmailPort } from "../runtime";
+import type { ResearchPort } from "../research/port";
+import { calendarPort, drivePort, gmailPort, researchPort } from "../runtime";
 import { iso } from "../time";
 import { guardEvent, guardFutureInstant, guardWindow } from "./when";
 import { resolveMultiPartyConflict } from "../ai/conflicts";
@@ -42,6 +43,7 @@ export function buildToolHandlers(
   calendar: CalendarPort = calendarPort(),
   gmail: GmailPort = gmailPort(),
   drive: DrivePort = drivePort(),
+  research: ResearchPort = researchPort(),
 ) {
   return {
     async get_availability(input: {
@@ -379,6 +381,19 @@ export function buildToolHandlers(
       return drive.search(input.query, input.limit ?? 5);
     },
 
+    async research(input: {
+      query: string;
+      recency?: "day" | "week" | "month" | "year";
+      topic?: "general" | "news";
+      limit?: number;
+    }) {
+      return research.search(input.query, {
+        maxResults: input.limit,
+        recency: input.recency,
+        topic: input.topic,
+      });
+    },
+
     async remember(input: {
       kind: string;
       subject: string;
@@ -460,6 +475,12 @@ export const toolInputSchemas = {
   get_meeting_context: z.object({
     requestId: z.string().optional(),
     calendarEventId: z.string().optional(),
+  }),
+  research: z.object({
+    query: z.string().describe("What to look up, e.g. a company or person"),
+    recency: z.enum(["day", "week", "month", "year"]).optional(),
+    topic: z.enum(["general", "news"]).optional(),
+    limit: z.number().int().positive().max(5).optional(),
   }),
   draft_email: z.object({
     to: z.string(),

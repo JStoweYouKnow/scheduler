@@ -10,7 +10,8 @@ A scheduling agent for Matriarch. It finds open time, holds it, matches inbound 
 - Nano classifies inbound mail (is this scheduling? which request?)
 - Ultra writes multi-party conflict tradeoffs only when `get_availability` returns no clean slot
 - Persistent memory (`projects`, `deliverables`, `people`, `memory_facts`) with remember / recall / Markdown dump
-- `DEMO_MODE=1` seeds fictional calendar + Gmail so judges only need a Nebius key
+- Counterparty research via Tavily in the `prep` skill — web text is sanitized and labelled untrusted before it reaches the loop
+- `DEMO_MODE=1` seeds fictional calendar + Gmail + research so judges only need a Nebius key
 
 ## Tech stack
 
@@ -18,7 +19,7 @@ A scheduling agent for Matriarch. It finds open time, holds it, matches inbound 
 - **App**: Next.js 16 (App Router) on Vercel
 - **Models**: NVIDIA Nemotron via Nebius Token Factory (`@ai-sdk/openai-compatible` at `https://api.tokenfactory.nebius.com/v1/`)
 - **Database**: Postgres / Supabase + Drizzle (optional in demo)
-- **Integrations**: Google Calendar + Gmail + Drive, Slack (optional), Clerk (optional)
+- **Integrations**: Google Calendar + Gmail + Drive, Tavily (optional), Slack (optional), Clerk (optional)
 - **Jobs**: Nebius Serverless Jobs for inbox + consolidation; Vercel crons as fallback
 
 ## Prerequisites
@@ -128,6 +129,7 @@ src/lib/email/              # Gmail port, inbox poller, Nano classify + eval
 src/lib/cron/               # agenda + follow-up drafts
 src/lib/ai/                 # Token Factory provider + model split
 src/lib/memory/             # facts, consolidation, Markdown dump
+src/lib/research/           # Tavily port, sanitizer, in-memory double
 jobs/                       # Nebius Serverless Job entrypoints
 ```
 
@@ -135,7 +137,11 @@ jobs/                       # Nebius Serverless Job entrypoints
 
 Reusable Super prompts live in `config/skills/*.yaml` next to the rules. Drop a new YAML file to add one — no TypeScript. Schema: `name`, `title`, `priority` (lower matches first), `when` (phrases), `instructions`, and optional `default: true` for the fallback (schedule).
 
-Shipped: `schedule`, `prep` (meeting context + Drive), `followup`, `track_project`, `stakeholder_update`.
+Shipped: `schedule`, `prep` (meeting context + Drive + Tavily research), `followup`, `track_project`, `stakeholder_update`.
+
+### Untrusted web text
+
+The `research` tool pulls from the open web into the context of an agent that can write calendar events and queue mail, so results are treated as data, never instruction: raw page content is never requested (snippets only), control characters and turn-delimiter markup (`<system>`, `[/INST]`, `<|…|>`) are stripped, snippets are capped and limited to five results, and every result carries an explicit untrusted-text note. The `prep` skill repeats the rule, and `src/lib/research/research.test.ts` asserts a hostile snippet is defanged at the tool boundary while still being shown to the owner.
 
 ### Memory
 
@@ -149,6 +155,7 @@ Tables: `projects`, `deliverables`, `people`, `memory_facts`. Nightly consolidat
 | `lookup_contact` | Team first, then shared-inbox search |
 | `get_meeting_context` | Request + notes + thread |
 | `search_drive` | Prep skill |
+| `research` | Tavily web search for counterparty background. Sanitized + marked untrusted; `available:false` without a key |
 | `create_scheduling_request` | Opens state for later mail |
 | `draft_email` | Gmail draft on the shared inbox |
 | `send_email` | Approval only; send happens after Approve |
@@ -169,6 +176,7 @@ Copy `.env.example`. Required for live: `NEBIUS_API_KEY`. Required unless `DEMO_
 | `TOKEN_ENCRYPTION_KEY` | unless demo | `openssl rand -base64 32` |
 | `GOOGLE_CLIENT_ID` / `SECRET` / `REDIRECT_URI` | unless demo | Calendar + Gmail + Drive |
 | `GMAIL_LABEL` | no | Overrides `sharedInbox.label` |
+| `TAVILY_API_KEY` | no | Counterparty research in `prep`. Seeded in demo; without it `prep` uses Drive + thread only |
 | `SLACK_BOT_TOKEN` / `SIGNING_SECRET` / `CHANNEL` | no | Approvals also live on the dashboard |
 | `NEXT_PUBLIC_CLERK_*` / `CLERK_SECRET_KEY` | no | Skipped in demo |
 | `CRON_SECRET` | no | Vercel cron auth |

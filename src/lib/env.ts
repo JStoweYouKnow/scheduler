@@ -23,6 +23,7 @@ export function getEnv() {
     modelReasoning: optional("MODEL_REASONING"),
     modelFast: optional("MODEL_FAST"),
     modelUltra: optional("MODEL_ULTRA"),
+    tavily: optional("TAVILY_API_KEY"),
     demoMode: isDemoMode(),
     googleClientId: optional("GOOGLE_CLIENT_ID"),
     googleClientSecret: optional("GOOGLE_CLIENT_SECRET"),

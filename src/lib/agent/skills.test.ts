@@ -24,6 +24,11 @@ describe("skills", () => {
     expect(selectSkill("prep me for the Tubi call, pull Drive").name).toBe("prep");
   });
 
+  it("routes research language to the prep skill", () => {
+    expect(selectSkill("research Tubi before Tuesday").name).toBe("prep");
+    expect(selectSkill("who is Sarah Chen").name).toBe("prep");
+  });
+
   it("honors an explicit skill name", () => {
     expect(selectSkill("hello", "track_project").name).toBe("track_project");
   });

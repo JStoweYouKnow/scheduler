@@ -95,10 +95,28 @@ described.
 | `LICENSE`, `package.json` | MIT. |
 | `config/team.yaml`, migrations `0002`, `0003` | Placeholder member names. |
 
+### 8. Counterparty research (Tavily)
+
+| Files | What |
+| --- | --- |
+| `src/lib/research/port.ts` | Types, the untrusted-text note, snippet sanitizer, result cap. |
+| `src/lib/research/tavily.ts` | Tavily `/search` wrapper. Bearer auth, 15s timeout, never requests `include_raw_content`. Returns `available:false` instead of throwing, so a failed lookup degrades the brief rather than failing the loop. |
+| `src/lib/research/memory.ts` | In-memory double; seeded in `DEMO_MODE` so judges see research without a Tavily key. |
+| `src/lib/research/research.test.ts` | 13 tests: request shaping, response normalising, graceful degradation, and a tool-boundary test asserting hostile web text is defanged. |
+| `src/lib/agent/tools.ts`, `run.ts` (changed) | New `research` tool, threaded through `buildToolHandlers`. |
+| `config/skills/prep.yaml` (changed) | `prep` now runs context → Drive → research, and carries the untrusted-text rule. |
+| `src/lib/runtime.ts`, `demo/seed.ts`, `env.ts`, `setup.ts`, `.env.example` (changed) | Port selection, demo seed, env plumbing, setup check. |
+
+Web text enters the context of an agent holding tools that write calendar
+events and queue outbound mail, so it is treated as data and never as
+instruction: snippets only, delimiter markup stripped, capped length, five
+results max, and an explicit untrusted note on every result.
+
 ## Nebius / NVIDIA usage summary
 
 - **Models:** Nemotron 3 Nano (classification), Nemotron 3 Super (tool loop, drafts, consolidation), Nemotron 3 Ultra (conflict tradeoffs). All served by Nebius Token Factory through its OpenAI-compatible API.
 - **Nebius Serverless Jobs:** always-on inbox poll and nightly memory consolidation.
+- **Tavily:** counterparty research inside the `prep` skill — the one input that isn't in our own calendar, inbox, or Drive.
 - **Vercel:** dashboard, Google/Slack webhooks, fallback crons.
 
 ## Feedback on Token Factory / Nemotron
