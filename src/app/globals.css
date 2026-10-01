@@ -4,11 +4,15 @@
  * Palette shared with Dailie and Interface (sage on near-black / light paper).
  * Theme toggles via .light-theme on <html>; localStorage key dailie-theme-v1
  * is shared across the suite on thewizardofops.app.
+ *
+ * Hierarchy here comes from surface and border weight, not from extra hues:
+ * ink (page) < panel (section) < raise (the thing asking for attention).
  */
 :root {
   --ink: #0a0d0b;
   --panel: #141a17;
   --panel-2: #1c2420;
+  --raise: #1a221d;
   --ghost: #26312b;
   --bone: #f0f3ee;
   --dim: #9aaba1;
@@ -18,6 +22,7 @@
   --warn: #b3a07f;
   --line: rgba(240, 243, 238, 0.12);
   --line-strong: rgba(240, 243, 238, 0.22);
+  --focus: #8fb49c;
   --grain-opacity: 0.035;
   --ease: cubic-bezier(0.22, 0.7, 0.2, 1);
 }
@@ -27,6 +32,10 @@
   --ink: #f3f5f1;
   --panel: #ffffff;
   --panel-2: #eaeee8;
+  /* Paper is already at full white, so on light the raised surface elevates
+     through border weight rather than brightness — anything dimmer than
+     --panel would invert the hierarchy. */
+  --raise: #ffffff;
   --ghost: #e0e5dd;
   --bone: #222f27;
   --dim: #5d6d63;
@@ -36,6 +45,7 @@
   --warn: #8a7444;
   --line: rgba(34, 47, 39, 0.11);
   --line-strong: rgba(34, 47, 39, 0.2);
+  --focus: #35543f;
   --grain-opacity: 0.02;
 }
 
@@ -50,11 +60,13 @@
   --color-ghost: var(--ghost);
   --color-panel: var(--panel);
   --color-panel-2: var(--panel-2);
+  --color-raise: var(--raise);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
   --color-warn: var(--warn);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-focus: var(--focus);
 }
 
 body {
@@ -83,6 +95,16 @@ body::before {
   color: var(--color-bone);
 }
 
+/*
+ * One ring for every interactive element. Uses --focus, not Tailwind's
+ * --color-focus: theme vars are registered as non-inheriting, so they resolve
+ * to nothing on descendants and the ring falls back to currentColor.
+ */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -94,11 +116,36 @@ body::before {
   background: var(--color-ghost);
   border-radius: 0;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-faint);
+}
 
-@keyframes fade-up {
+/*
+ * Numerals in the console readout. Instrument Serif at display size against
+ * tracked sans labels; tabular figures so the counts don't jitter on poll.
+ */
+.figure {
+  font-family: var(--font-serif), Georgia, serif;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 0.9;
+}
+
+/*
+ * Hairline that fades out, used to close a section without drawing a full
+ * rule across the column.
+ */
+.rule-fade {
+  height: 1px;
+  background: linear-gradient(to right, var(--color-line-strong), transparent);
+}
+
+/* A single page-load reveal, not a per-section entrance. */
+@keyframes settle {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -106,6 +153,32 @@ body::before {
   }
 }
 
-.animate-fade-up {
-  animation: fade-up 0.45s var(--ease) both;
+.animate-settle {
+  animation: settle 0.5s var(--ease) both;
+}
+
+/* Attention pulse on the approvals edge — the one piece of ambient motion. */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 3.2s var(--ease) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

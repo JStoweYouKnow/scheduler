@@ -10,8 +10,19 @@ export function AppShell({
 }) {
   return (
     <>
+      <a
+        href="#home"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[300] focus:border focus:border-line-strong focus:bg-panel focus:px-3 focus:py-2 focus:text-xs focus:font-medium focus:uppercase focus:tracking-[0.1em] focus:text-bone"
+      >
+        Skip to content
+      </a>
       <Sidebar clerkEnabled={clerkEnabled} />
-      <main className="ml-56 min-h-screen px-8 py-8 md:px-10">{children}</main>
+      <main
+        id="main"
+        className="min-h-screen px-5 pb-16 pt-6 sm:px-8 md:px-10 lg:ml-56 lg:pt-10"
+      >
+        <div className="mx-auto max-w-5xl">{children}</div>
+      </main>
     </>
   );
 }
