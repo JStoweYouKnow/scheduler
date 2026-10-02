@@ -127,7 +127,7 @@ export function Sidebar({ clerkEnabled = false }: { clerkEnabled?: boolean }) {
           </a>
         ))}
       </div>
-      <ThemeToggle className="mt-3 block w-full" />
+      <ThemeToggle className="mt-3 w-full" />
     </div>
   );
 
@@ -136,15 +136,18 @@ export function Sidebar({ clerkEnabled = false }: { clerkEnabled?: boolean }) {
       {/* Mobile bar */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-ink/95 px-5 py-3 backdrop-blur lg:hidden">
         {brand}
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-expanded={open}
-          aria-controls="nav-drawer"
-          className="border border-line px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-dim transition-colors hover:border-line-strong hover:text-bone"
-        >
-          Menu
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle compact />
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-expanded={open}
+            aria-controls="nav-drawer"
+            className="border border-line px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-dim transition-colors hover:border-line-strong hover:text-bone"
+          >
+            Menu
+          </button>
+        </div>
       </div>
 
       {/* Drawer backdrop — above the grain overlay, which sits at z-100. */}

@@ -105,6 +105,39 @@ body::before {
   outline-offset: 2px;
 }
 
+/*
+ * Theme switch. Which segment reads as active is decided in CSS off the
+ * .light-theme class the boot script sets before first paint, not from React
+ * state — otherwise the control renders with the wrong segment lit until
+ * hydration reads localStorage. Raw vars, not Tailwind's --color-* theme
+ * vars, which are non-inheriting.
+ */
+.theme-seg {
+  color: var(--faint);
+  background: transparent;
+  transition:
+    color 0.2s var(--ease),
+    background-color 0.2s var(--ease);
+}
+.theme-seg:hover {
+  color: var(--bone);
+}
+.theme-seg[data-mode="dark"] {
+  color: var(--bone);
+  background: var(--ghost);
+}
+.light-theme .theme-seg[data-mode="dark"] {
+  color: var(--faint);
+  background: transparent;
+}
+.light-theme .theme-seg[data-mode="light"] {
+  color: var(--bone);
+  background: var(--ghost);
+}
+.light-theme .theme-seg[data-mode="dark"]:hover {
+  color: var(--bone);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
